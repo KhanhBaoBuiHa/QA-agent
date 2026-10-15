@@ -33,8 +33,6 @@ RULES:
 4. Cover the happy path and the edge cases the spec implies (empty cart, invalid input, boundaries).
 5. Every test ends with at least one expect_* action.
 6. Test ids are unique: t1, t2, ...
-7. A success/confirmation message alone is NOT proof that a calculation is right. When the spec states a value that can be computed (for example a total after a discount), compute the exact expected number yourself from the prices and percentages in the spec, and assert it with expect_text on the element that shows it. Write numbers in the same format the spec uses (for example 90.000).
-8. Cover every numbered point of the spec: each point needs at least one test whose assertions check THAT point's observable outcome (a number, a message, or an enabled/disabled state), not just that the page did not crash.
 """
 
 

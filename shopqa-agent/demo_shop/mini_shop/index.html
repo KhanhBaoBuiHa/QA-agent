@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Mini Shop</title></head>
+<body>
+  <h1>Mini Shop</h1>
+
+  <div data-testid="product-p1">Áo thun - 100.000đ
+    <button data-testid="add-p1">Thêm vào giỏ</button></div>
+  <div data-testid="product-p2">Quần jean - 300.000đ
+    <button data-testid="add-p2">Thêm vào giỏ</button></div>
+
+  <h2>Giỏ hàng</h2>
+  <p>Số món: <span data-testid="cart-count">0</span></p>
+  <p data-testid="cart-total">Tổng: 0đ</p>
+
+  <input data-testid="coupon-input" placeholder="Mã giảm giá">
+  <button data-testid="apply-coupon">Áp dụng</button>
+  <p data-testid="coupon-message"></p>
+
+  <button data-testid="checkout-button">Thanh toán</button>
+  <p data-testid="order-message"></p>
+
+<script>
+  // Lỗi cài sẵn, bật bằng query string:  /?bug=coupon   hoặc   /?bug=checkout
+  const bug = new URLSearchParams(location.search).get('bug');
+  const prices = { p1: 100000, p2: 300000 };
+  let cart = [], discount = 0;
+  const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const $ = t => document.querySelector(`[data-testid="${t}"]`);
+
+  function render() {
+    const sub = cart.reduce((s, id) => s + prices[id], 0);
+    $('cart-count').textContent = cart.length;
+    $('cart-total').textContent = 'Tổng: ' + fmt(Math.round(sub * (1 - discount))) + 'đ';
+    // bug=checkout: nút thanh toán không bị vô hiệu khi giỏ trống
+    $('checkout-button').disabled = bug === 'checkout' ? false : cart.length === 0;
+  }
+
+  document.querySelectorAll('[data-testid^="add-"]').forEach(b =>
+    b.onclick = () => { cart.push(b.dataset.testid.slice(4)); render(); });
+
+  $('apply-coupon').onclick = () => {
+    if ($('coupon-input').value.trim() === 'SALE10') {
+      discount = bug === 'coupon' ? 0.01 : 0.10;   // bug=coupon: giảm 1% thay vì 10%
+      $('coupon-message').textContent = 'Áp dụng mã thành công: giảm 10%';
+    } else {
+      discount = 0;
+      $('coupon-message').textContent = 'Mã không hợp lệ';
+    }
+    render();
+  };
+
+  $('checkout-button').onclick = () => {
+    $('order-message').textContent = cart.length ? 'Đặt hàng thành công' : 'Giỏ hàng trống';
+  };
+  render();
+</script>
+</body>
+</html>

@@ -6,7 +6,6 @@ import re
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from shopqa.llm import get_llm, response_text
-from shopqa.log import log
 from shopqa.prompts import GENERATE_SYSTEM, build_generate_user_prompt
 from shopqa.schemas import TestSuiteModel
 from shopqa.state import AgentState, TestCase
@@ -42,8 +41,7 @@ def generate_tests(state: AgentState, llm=None, max_tests: int | None = None) ->
     ]
 
     suite, last_error = None, None
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        log(f"[generate_tests] gọi LLM sinh test (lần {attempt}/{MAX_ATTEMPTS})...")
+    for _ in range(MAX_ATTEMPTS):
         reply = response_text(llm.invoke(messages))
         try:
             suite = parse_suite(reply)
@@ -69,5 +67,4 @@ def generate_tests(state: AgentState, llm=None, max_tests: int | None = None) ->
         )
         for t in suite.tests[:max_tests]
     ]
-    log(f"[generate_tests] đã sinh {len(tests)} test")
     return {"test_cases": tests}

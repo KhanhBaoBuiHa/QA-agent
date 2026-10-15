@@ -4,7 +4,6 @@ from pathlib import Path
 
 from playwright.sync_api import Browser, sync_playwright
 
-from shopqa.log import log
 from shopqa.state import AgentState, TestCase, TestResult
 from shopqa.tools.browser import ActionError, describe, execute_action
 
@@ -59,13 +58,9 @@ def run_tests(state: AgentState, *, headless: bool | None = None,
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         try:
-            total = len(state["test_cases"])
-            log(f"[run_tests] chạy {total} test (lượt sửa {state['repair_attempts']})")
-            for i, test in enumerate(state["test_cases"], start=1):
-                res = _run_one(browser, test, state["base_url"], out_root / test["id"], timeout_ms)
-                results.append(res)
-                status = "PASS" if res["passed"] else f"FAIL ({res['error_type']})"
-                log(f"[run_tests] {i}/{total} {test['id']}: {status}")
+            for test in state["test_cases"]:
+                results.append(_run_one(browser, test, state["base_url"],
+                                        out_root / test["id"], timeout_ms))
         finally:
             browser.close()
     return {"results": results}
