@@ -1,0 +1,11 @@
+langgraph
+langchain-core
+pydantic>=2
+playwright
+python-dotenv
+pytest
+
+# langchain-anthropic
+langchain-google-genai
+# langchain-ollama
+# langchain-openai
