@@ -16,13 +16,20 @@ from shopqa.state import AgentState
 
 
 def make_router(self_repair: bool):
-    """Tạo hàm quyết định đi tiếp đâu sau node classify."""
+    """Quyết định có chuyển sang vòng tự sửa hay không."""
 
     def route_after_classify(state: AgentState) -> str:
-        has_test_error = any(f["verdict"] == "test_error" for f in state["findings"])
-        can_repair = state["repair_attempts"] < state["max_repairs"]
+        has_test_error = any(
+            finding["verdict"] == "test_error"
+            for finding in state["findings"]
+        )
+        can_repair = (
+            state["repair_attempts"] < state["max_repairs"]
+        )
+
         if self_repair and has_test_error and can_repair:
             return "repair_test"
+
         return "report"
 
     return route_after_classify

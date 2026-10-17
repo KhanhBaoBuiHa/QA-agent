@@ -11,7 +11,12 @@ from datetime import datetime
 from typing import Optional, TypedDict, Literal
 
 # Ba kết quả mà node classify có thể đưa ra cho mỗi test
-Verdict = Literal["pass", "real_bug", "test_error"]
+Verdict = Literal[
+    "pass",
+    "real_bug",
+    "test_error",
+    "inconclusive",
+]
 
 
 class Action(TypedDict, total=False):
