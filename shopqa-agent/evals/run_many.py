@@ -179,19 +179,32 @@ def run_experiment(args, run_once=run_agent_once, sleep=time.sleep) -> None:
                     final = run_once(spec, url, args.pages, variant == "B", args.max_repairs,
                                      [mode, f"variant-{variant}", args.prompt_version, model],
                                      {"mode": mode, "variant": variant, "prompt_version": args.prompt_version})
+                
                 except Exception as exc:  # noqa: BLE001
+                    import traceback
+
                     kind = error_kind(exc)
-                    row.update(status=f"error:{kind}", seconds=round(time.monotonic() - started, 1),
-                               note=f"{type(exc).__name__}: {str(exc)[:200]}")
+                    error_detail = f"{type(exc).__name__}: {str(exc)}"
+
+                    row.update(
+                        status=f"error:{kind}",
+                        seconds=round(time.monotonic() - started, 1),
+                        note=error_detail[:1000],
+                    )
                     append_row(csv_path, row)
                     consecutive_errors += 1
-                    log(f"[eval] lỗi API ({kind}): lần chạy này không được tính")
+
+                    log(f"[eval] lỗi ({kind}): {error_detail}")
+                    traceback.print_exc()
+
                     if kind == "quota":
-                        log("[eval] HẾT HẠN MỨC: dừng hẳn. Kết quả đã lưu, chạy lại sau khi hạn mức đặt lại.")
+                        log("[eval] HẾT HẠN MỨC: dừng hẳn.")
                         return
+
                     if consecutive_errors >= args.max_consecutive_errors:
-                        log(f"[eval] {consecutive_errors} lần lỗi liên tiếp: dừng để khỏi tốn hạn mức.")
+                        log(f"[eval] {consecutive_errors} lần lỗi liên tiếp: dừng để tránh tốn hạn mức.")
                         return
+
                     sleep(args.error_pause)
                     continue
 
