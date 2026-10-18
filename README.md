@@ -51,15 +51,27 @@ ShopQA-Agent làm đúng quy trình đó:
 ## Kết quả đo
 
 Thiết lập: model `gemini-3.8-flash`, nhiệt độ 0, shop `mini_shop`, spec `specs/checkout.md`.
-Số liệu hiện còn ít, đọc như dữ liệu ban đầu chứ chưa phải kết luận thống kê.
+Số liệu hiện còn ít (mỗi chế độ mới 1 lần chạy), đọc như dữ liệu ban đầu chứ chưa phải kết luận thống kê.
+
+### Đo tự động (`evals/run_many.py`)
+
+Bảng dưới được tạo từ `shopqa-agent/evals/results/runs.csv`. Lần chạy bị lỗi API không tính vào mẫu số.
+
+<!-- RESULTS:START -->
+| Prompt | Phiên bản | Chế độ | Số lần chạy | Bắt được lỗi | Báo nhầm | Lần lỗi API (không tính) |
+|---|---|---|---|---|---|---|
+| sau-sua | B | checkout | 1 | 1/1 (100%) | - | 0 |
+| sau-sua | B | clean | 1 | - | 0/1 (0%) | 0 |
+| sau-sua | B | coupon | 1 | 1/1 (100%) | - | 0 |
+<!-- RESULTS:END -->
+
+### Lịch sử cải tiến prompt (chạy tay, trước khi có script đo)
 
 | Chế độ | Prompt | Số lần chạy | Kết quả |
 |---|---|---|---|
 | `bug=coupon` (giảm 1% thay vì 10%) | ban đầu | 1 | **Bỏ sót lỗi**: test chỉ kiểm tra thông báo "Áp dụng thành công", tổng 99.000đ vẫn PASS |
 | `bug=coupon` | thêm quy tắc "phải tự tính và kiểm tra con số kỳ vọng" | 7 | **Bắt được 7/7**, đều `assertion_failed` |
-| `bug=checkout` | sau khi sửa | chưa đo | |
 | Shop sạch (không có lỗi) | ban đầu | 1 | 6/6 PASS, 0 báo nhầm |
-| Shop sạch | sau khi sửa | chưa đo | |
 
 Ví dụ báo cáo của một lần chạy `bug=coupon`:
 
@@ -72,7 +84,13 @@ Ví dụ báo cáo của một lần chạy `bug=coupon`:
 
 **Bài học rút ra:** lần chạy đầu agent bỏ sót lỗi không phải vì phần chạy test sai, mà vì LLM sinh test chưa đủ chặt.
 Thêm hai quy tắc vào prompt (kiểm tra con số tính được, mỗi điểm của spec cần ít nhất một test kiểm tra kết quả của chính nó)
-đã khắc phục trong các lần chạy sau. Bảng số liệu chi tiết nằm ở `shopqa-agent/docs/shopqa-ket-qua-do.xlsx`.
+đã khắc phục trong các lần chạy sau. Số liệu từng lần chạy nằm ở `shopqa-agent/evals/results/runs.csv`.
+
+## Bằng chứng
+
+<!-- EVIDENCE:START -->
+_Chưa có ảnh bằng chứng. Chạy `python evals/collect_evidence.py --update-readme ../README.md` sau khi đo._
+<!-- EVIDENCE:END -->
 
 ## Chạy thử
 
@@ -140,6 +158,11 @@ python evals/run_many.py --summary                                           # c
 - **Bắt được lỗi:** có test FAIL (`assertion_failed`) đúng vào phần tử của lỗi cài sẵn. **Báo nhầm:** shop sạch mà có test FAIL.
   Hai chỉ số này tính từ kết quả chạy trình duyệt, không phụ thuộc vào node `classify`.
 - Lần chạy bị lỗi API (quá tải, hết hạn mức) được ghi riêng và **không tính vào mẫu số**; gặp hết hạn mức thì script tự dừng để khỏi tốn thêm lượt gọi.
+- Lỗi cài đặt (thiếu gói, sai môi trường Python) làm script dừng ngay và **không** ghi vào CSV. Nếu CSV đã có các dòng như vậy,
+  dọn bằng `python evals/run_many.py --drop-setup-errors`.
+- Ghi bảng kết quả thẳng vào README: `python evals/run_many.py --summary --update-readme ../README.md`.
+- Tạo ảnh bằng chứng (ảnh chụp lúc agent bắt được lỗi, đặt cạnh ảnh cùng bước trên shop đúng) và ghi vào README:
+  `python evals/collect_evidence.py --update-readme ../README.md`.
 - Mỗi lần chạy gọi LLM ít nhất một lần (sinh test), thêm một lần cho mỗi test FAIL (phân loại) và cho mỗi lượt sửa, nên 15 lần chạy có thể tốn khá nhiều hạn mức.
 
 ### Langfuse (tùy chọn)
@@ -191,10 +214,10 @@ shopqa-agent/
 │   ├── nodes/            # generate_tests, run_tests, stubs (classify, repair_test, report)
 │   ├── prompts/          # prompt tách riêng khỏi code
 │   └── tools/browser.py  # hàm bọc Playwright, đọc phần tử UI
-├── evals/                # run_many.py: chạy lặp, tính tỉ lệ bắt lỗi / báo nhầm, ghi CSV
+├── evals/                # run_many.py (chạy lặp, đo tỉ lệ bắt lỗi / báo nhầm, ghi CSV), collect_evidence.py (ảnh bằng chứng)
 ├── demo_shop/mini_shop/  # shop demo một trang, có lỗi cài sẵn
 ├── specs/checkout.md     # mô tả tính năng làm đầu vào cho agent
-├── tests/                # 48 test pytest (LLM giả + trình duyệt thật)
+├── tests/                # 56 test pytest (LLM giả + trình duyệt thật)
 └── docs/                 # sơ đồ và bảng số liệu
 ```
 
@@ -213,12 +236,15 @@ shopqa-agent/
 
 - [x] Sinh test bằng LLM, kiểm tra schema, thử lại khi sai
 - [x] Chạy test bằng Playwright, chụp ảnh, phân loại loại lỗi
-- [x] Shop demo với lỗi cài sẵn và bộ kiểm thử tự động (48 test)
+- [x] Shop demo với lỗi cài sẵn và bộ kiểm thử tự động (56 test)
 - [x] Đo ban đầu cho `bug=coupon`
 - [x] `classify` kết hợp quy tắc và LLM; `repair_test` tự sửa test rồi chạy lại (kiểm thử bằng LLM giả)
 - [x] Tích hợp Langfuse (tùy chọn)
 - [x] Script đo tự động `evals/run_many.py` (tỉ lệ bắt lỗi, báo nhầm, so sánh phiên bản A/B)
-- [ ] Đo `bug=checkout` và shop sạch với prompt đã sửa (cần hạn mức Gemini)
+- [x] Đo bước đầu cả 3 chế độ (mỗi chế độ 1 lần)
+- [x] Công cụ tạo ảnh bằng chứng từ các lần đo
+- [ ] Đo đủ cỡ mẫu (khoảng 5 lần mỗi chế độ) để tỉ lệ có ý nghĩa
+- [ ] Ảnh trace trên Langfuse
 - [ ] Chốt chặn cho vòng tự sửa: `assertion_failed` luôn là lỗi thật theo quy tắc; `repair_test` không được làm yếu assertion
 - [ ] Kịch bản UI thay đổi (ví dụ shop đổi tên `data-testid`) để vòng tự sửa có việc làm, rồi so sánh A với B
 - [ ] Bộ lỗi cài sẵn lớn hơn (15-20 lỗi)
