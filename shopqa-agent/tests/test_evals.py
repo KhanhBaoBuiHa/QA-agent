@@ -142,3 +142,39 @@ def test_experiment_stops_after_consecutive_errors(tmp_path):
 
     rm.run_experiment(make_args(tmp_path, runs=5), run_once=run_once, sleep=lambda s: None)
     assert len(calls) == 3
+
+
+# ---- lỗi cài đặt, dọn CSV, tìm test đã bắt được lỗi ----
+
+def test_import_error_is_a_setup_error_not_an_api_error():
+    assert rm.error_kind(ModuleNotFoundError("No module named 'langchain_google_genai'")) == "setup"
+
+
+def test_setup_error_stops_immediately_and_is_not_recorded(tmp_path):
+    calls = []
+
+    def run_once(*a):
+        calls.append(1)
+        raise ModuleNotFoundError("No module named 'shopqa.tracing'")
+
+    rm.run_experiment(make_args(tmp_path, runs=5), run_once=run_once, sleep=lambda s: None)
+    assert len(calls) == 1
+    assert not (tmp_path / "runs.csv").exists()
+
+
+def test_drop_setup_errors_keeps_real_runs(tmp_path):
+    path = tmp_path / "runs.csv"
+    rm.append_row(path, {"mode": "coupon", "status": "error:other", "note": "ModuleNotFoundError: No module named 'x'"})
+    rm.append_row(path, {"mode": "coupon", "status": "error:overloaded", "note": "503 UNAVAILABLE"})
+    rm.append_row(path, {"mode": "clean", "status": "ok", "false_alarm": "False"})
+    assert rm.drop_setup_errors(path) == 1
+    assert [r["status"] for r in rm.read_rows(path)] == ["error:overloaded", "ok"]
+    assert rm.drop_setup_errors(path) == 0
+
+
+def test_detecting_result_points_at_the_failing_test():
+    final = {"test_cases": [tc("t1", [GOTO, CHECKOUT]), tc("t2", [GOTO, TOTAL])],
+             "results": [res("t1"), res("t2", False, "assertion_failed", 2)]}
+    assert rm.detecting_result("coupon", final)["test_id"] == "t2"
+    assert rm.detecting_result("checkout", final) is None
+    assert rm.detecting_result("clean", final) is None

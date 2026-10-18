@@ -5,6 +5,7 @@ playwright
 python-dotenv
 pytest
 langfuse            # tùy chọn, chỉ dùng khi bật Langfuse trong .env
+pillow              # tùy chọn, cắt gọn ảnh bằng chứng (evals/collect_evidence.py)
 
 # langchain-anthropic
 langchain-google-genai

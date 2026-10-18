@@ -28,6 +28,8 @@ try:
 except ImportError:
     pass
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # để import được `evals.readme_tools`
+
 from shopqa.log import log  # noqa: E402  (import log trước để in UTF-8 trên Windows)
 from shopqa.state import initial_state  # noqa: E402
 
@@ -44,7 +46,9 @@ FIELDS = ["timestamp", "run_id", "mode", "variant", "prompt_version", "model", "
 
 
 def error_kind(exc: Exception) -> str:
-    """Phân loại lỗi API để quyết định dừng hẳn hay chạy tiếp."""
+    """Phân loại lỗi để quyết định dừng hẳn hay chạy tiếp."""
+    if isinstance(exc, ImportError):
+        return "setup"  # thiếu gói / sai môi trường Python: không phải lỗi API, không phải một lần đo
     text = f"{type(exc).__name__} {exc}".lower()
     if "429" in text or "resource_exhausted" in text or "quota" in text:
         return "quota"
@@ -55,29 +59,32 @@ def error_kind(exc: Exception) -> str:
     return "other"
 
 
+def detecting_result(mode: str, final: dict):
+    """Trả về kết quả test đã bắt được lỗi cài sẵn (hoặc None): FAIL kiểu assertion_failed đúng vào phần tử của lỗi."""
+    bug_target = MODES[mode]["bug_target"]
+    if not bug_target:
+        return None
+    tests = {t["id"]: t for t in final.get("test_cases", [])}
+    for r in final.get("results", []):
+        if r["passed"] or r["error_type"] != "assertion_failed" or not r.get("failed_step"):
+            continue
+        actions = tests.get(r["test_id"], {}).get("actions", [])
+        idx = r["failed_step"] - 1
+        if 0 <= idx < len(actions) and bug_target in (actions[idx].get("target") or ""):
+            return r
+    return None
+
+
 def evaluate(mode: str, final: dict) -> dict:
     """Tính các chỉ số của một lần chạy từ state cuối cùng."""
-    tests = {t["id"]: t for t in final.get("test_cases", [])}
     results = final.get("results", [])
     failed = [r for r in results if not r["passed"]]
-    bug_target = MODES[mode]["bug_target"]
-
-    detected = None
-    if bug_target:
-        detected = False
-        for r in failed:
-            if r["error_type"] != "assertion_failed" or not r.get("failed_step"):
-                continue
-            actions = tests.get(r["test_id"], {}).get("actions", [])
-            idx = r["failed_step"] - 1
-            if 0 <= idx < len(actions) and bug_target in (actions[idx].get("target") or ""):
-                detected = True
-                break
+    has_bug = MODES[mode]["bug_target"] is not None
     return {
         "n_tests": len(results),
         "n_failed": len(failed),
-        "detected": detected,
-        "false_alarm": (len(failed) > 0) if bug_target is None else None,
+        "detected": (detecting_result(mode, final) is not None) if has_bug else None,
+        "false_alarm": None if has_bug else len(failed) > 0,
         "error_types": dict(Counter(r["error_type"] for r in failed)),
         "verdicts": dict(Counter(f["verdict"] for f in final.get("findings", []))),
         "repair_attempts": final.get("repair_attempts", 0),
@@ -93,6 +100,19 @@ def append_row(path: Path, row: dict) -> None:
         if new_file:
             writer.writeheader()
         writer.writerow({k: row.get(k, "") for k in FIELDS})
+
+
+def drop_setup_errors(path: Path) -> int:
+    """Xóa các dòng lỗi cài đặt (thiếu gói...) đã lỡ ghi vào CSV. Trả về số dòng đã xóa."""
+    rows = read_rows(path)
+    keep = [r for r in rows
+            if not (r.get("status", "").startswith("error:") and
+                    ("ModuleNotFoundError" in r.get("note", "") or "ImportError" in r.get("note", "")))]
+    if len(keep) != len(rows):
+        path.unlink()
+        for r in keep:
+            append_row(path, r)
+    return len(rows) - len(keep)
 
 
 def read_rows(path: Path) -> list[dict]:
@@ -126,7 +146,7 @@ def format_table(summary: list[dict]) -> str:
     def frac(n, d):
         return f"{n}/{d} ({n / d:.0%})" if d else "-"
 
-    lines = ["| Prompt | Phiên bản | Chế độ | Số lần chạy | Bắt được lỗi | Báo nhầm | Lần lỗi API |",
+    lines = ["| Prompt | Phiên bản | Chế độ | Số lần chạy | Bắt được lỗi | Báo nhầm | Lần lỗi API (không tính) |",
              "|---|---|---|---|---|---|---|"]
     for g in summary:
         has_bug = MODES[g["mode"]]["bug_target"] is not None
@@ -185,6 +205,10 @@ def run_experiment(args, run_once=run_agent_once, sleep=time.sleep) -> None:
 
                     kind = error_kind(exc)
                     error_detail = f"{type(exc).__name__}: {str(exc)}"
+                    if kind == "setup":
+                        log(f"[eval] LỖI CÀI ĐẶT (không phải lỗi API, không ghi vào CSV): {error_detail}")
+                        log("[eval] Kiểm tra đã bật .venv, đã cài gói trong requirements.txt (và gói provider LLM) chưa.")
+                        return
 
                     row.update(
                         status=f"error:{kind}",
@@ -238,12 +262,23 @@ def main() -> None:
     ap.add_argument("--max-consecutive-errors", type=int, default=3)
     ap.add_argument("--csv", default="evals/results/runs.csv")
     ap.add_argument("--summary", action="store_true", help="chỉ in bảng tổng hợp từ file CSV")
+    ap.add_argument("--drop-setup-errors", action="store_true",
+                    help="xóa khỏi CSV các dòng lỗi cài đặt (ModuleNotFoundError...) rồi in bảng")
+    ap.add_argument("--update-readme", metavar="README",
+                    help="ghi bảng tổng hợp vào README, giữa hai dấu mốc <!-- RESULTS:START --> và <!-- RESULTS:END -->")
     args = ap.parse_args()
 
-    if not args.summary:
+    if args.drop_setup_errors:
+        print(f"Đã xóa {drop_setup_errors(Path(args.csv))} dòng lỗi cài đặt khỏi {args.csv}")
+    elif not args.summary:
         run_experiment(args)
     rows = read_rows(Path(args.csv))
-    print("\n" + (format_table(summarize(rows)) if rows else "(chưa có số liệu)"))
+    table = format_table(summarize(rows)) if rows else "(chưa có số liệu)"
+    print("\n" + table)
+    if args.update_readme and rows:
+        from evals.readme_tools import replace_block
+        replace_block(args.update_readme, "RESULTS", table)
+        print(f"Đã cập nhật bảng kết quả trong {args.update_readme}")
 
 
 if __name__ == "__main__":
