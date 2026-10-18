@@ -89,7 +89,21 @@ Thêm hai quy tắc vào prompt (kiểm tra con số tính được, mỗi đi�
 ## Bằng chứng
 
 <!-- EVIDENCE:START -->
-_Chưa có ảnh bằng chứng. Chạy `python evals/collect_evidence.py --update-readme ../README.md` sau khi đo._
+**Lỗi mã giảm giá (`?bug=coupon`: giảm 1% thay vì 10%)**
+
+| Shop có lỗi | Shop đúng |
+|:---:|:---:|
+| ![coupon có lỗi](shopqa-agent/docs/evidence/coupon_bug.png) | ![coupon shop đúng](shopqa-agent/docs/evidence/coupon_clean.png) |
+
+> Agent báo: `✗ 6. expect_text [data-testid="cart-total"] = '270.000đ' -> assertion_failed: kỳ vọng chứa '270.000đ', thực tế là 'tổng: 297.000đ'`
+
+**Lỗi nút thanh toán (`?bug=checkout`: không bị vô hiệu khi giỏ trống)**
+
+| Shop có lỗi | Shop đúng |
+|:---:|:---:|
+| ![checkout có lỗi](shopqa-agent/docs/evidence/checkout_bug.png) | ![checkout shop đúng](shopqa-agent/docs/evidence/checkout_clean.png) |
+
+> Agent báo: `✗ 4. expect_disabled [data-testid="checkout-button"] -> assertion_failed: [data-testid="checkout-button"] đang bật, trái với kỳ vọng`
 <!-- EVIDENCE:END -->
 
 ## Chạy thử

@@ -1,13 +1,4 @@
 ﻿timestamp,run_id,mode,variant,prompt_version,model,status,n_tests,n_failed,detected,false_alarm,error_types,verdicts,repair_attempts,seconds,artifacts_dir,note
-2026-10-18 00:42:04,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,1.5,,ModuleNotFoundError: No module named 'shopqa.tracing'
-2026-10-18 00:43:05,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,0.0,,ModuleNotFoundError: No module named 'shopqa.tracing'
-2026-10-18 00:44:05,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,0.0,,ModuleNotFoundError: No module named 'shopqa.tracing'
-2026-10-18 15:14:39,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,2.0,,ModuleNotFoundError: No module named 'langchain_google_genai'
-2026-10-18 15:15:41,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,0.5,,ModuleNotFoundError: No module named 'langchain_google_genai'
-2026-10-18 15:16:42,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,0.5,,ModuleNotFoundError: No module named 'langchain_google_genai'
-2026-10-18 15:24:08,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,2.4,,ModuleNotFoundError: No module named 'langchain_google_genai'
-2026-10-18 15:25:11,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,1.7,,ModuleNotFoundError: No module named 'langchain_google_genai'
-2026-10-18 15:26:12,,coupon,B,sau-sua,gemini-3.8-flash,error:other,,,,,,,,0.6,,ModuleNotFoundError: No module named 'langchain_google_genai'
 2026-10-18 15:28:27,20261018-152829,coupon,B,sau-sua,gemini-3.8-flash,ok,5,1,True,,"{""assertion_failed"": 1}","{""pass"": 4, ""real_bug"": 1}",0,33.0,artifacts\20261018-152829,
 2026-10-18 15:29:00,20261018-152901,checkout,B,sau-sua,gemini-3.8-flash,ok,5,1,True,,"{""assertion_failed"": 1}","{""real_bug"": 1, ""pass"": 4}",0,126.1,artifacts\20261018-152901,
 2026-10-18 15:31:07,20261018-153107,clean,B,sau-sua,gemini-3.8-flash,ok,5,0,,False,{},"{""pass"": 5}",0,18.3,artifacts\20261018-153107,
